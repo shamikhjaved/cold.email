@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clay Costs & Credits Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .config-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .config-panel h2 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .filters {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filter-group select {
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-group select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-top: 4px solid;
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card.blue { border-color: #3b82f6; }
+        .metric-card.green { border-color: #10b981; }
+        .metric-card.purple { border-color: #8b5cf6; }
+        .metric-card.orange { border-color: #f59e0b; }
+        .metric-card.pink { border-color: #ec4899; }
+        .metric-card.cyan { border-color: #06b6d4; }
+        .metric-card.teal { border-color: #14b8a6; }
+
+        .metric-title {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 12px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            background: #efe;
+            border: 2px solid #cfc;
+            color: #3c3;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .filters {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Clay Costs & Credits Dashboard</h1>
+            <p>Track your Clay enrichment costs and credits</p>
+        </div>
+
+        <!-- Configuration Panel (shown on first load) -->
+        <div id="configPanel" class="config-panel">
+            <h2>🔧 Initial Setup</h2>
+            <p style="margin-bottom: 1.5rem; color: #666;">Enter your Supabase credentials to get started. These are stored locally in your browser.</p>
+            
+            <div class="input-group">
+                <label for="supabaseUrl">Supabase Project URL</label>
+                <input 
+                    type="text" 
+                    id="supabaseUrl" 
+                    placeholder="https://your-project.supabase.co"
+                    value="https://acvqjegljxmbqselcjlp.supabase.co"
+                >
+            </div>
+            
+            <div class="input-group">
+                <label for="supabaseKey">Supabase Anon Key</label>
+                <input 
+                    type="password" 
+                    id="supabaseKey" 
+                    placeholder="Your anon key here"
+                >
+            </div>
+            
+            <button class="btn" onclick="saveConfig()">Save & Connect</button>
+            <div id="configMessage"></div>
+        </div>
+
+        <!-- Main Dashboard (shown after config) -->
+        <div id="dashboard" style="display: none;">
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="clientSelect">Select Client:</label>
+                    <select id="clientSelect" onchange="onClientChange()">
+                        <option value="">-- Select Client --</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="listSelect">Select List:</label>
+                    <select id="listSelect" onchange="onListChange()" disabled>
+                        <option value="">-- Select List --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="metricsContainer">
+                <div class="empty-state">
+                    Select a client and list to view metrics
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabaseClient = null;
+        let clients = [];
+        let lists = [];
+
+        // Load saved config on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('supabaseUrl');
+            const savedKey = localStorage.getItem('supabaseKey');
+            
+            if (savedUrl && savedKey) {
+                document.getElementById('supabaseUrl').value = savedUrl;
+                document.getElementById('supabaseKey').value = savedKey;
+                initSupabase(savedUrl, savedKey);
+            }
+        });
+
+        function saveConfig() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            if (!url || !key) {
+                showMessage('configMessage', 'Please enter both URL and Key', 'error');
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('supabaseUrl', url);
+            localStorage.setItem('supabaseKey', key);
+
+            // Initialize Supabase
+            initSupabase(url, key);
+        }
+
+        function initSupabase(url, key) {
+            try {
+                supabaseClient = supabase.createClient(url, key);
+                
+                // Hide config, show dashboard
+                document.getElementById('configPanel').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                // Load clients
+                loadClients();
+                
+                showMessage('configMessage', 'Connected successfully!', 'success');
+            } catch (error) {
+                showMessage('configMessage', 'Error connecting: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 3000);
+        }
+
+        async function loadClients() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('clay_tracking')
+                    .select('client_name')
+                    .order('client_name');
+
+                if (error) throw error;
+
+                clients = [...new Set(data.map(row => row.client_name))];
+                
+                const select = document.getElementById('clientSelect');
+                select.innerHTML = '<option value="">-- Select Client --</option>';
+                clients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client;
+                    option.textContent = client;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading clients:', error);
+                document.getElementById('metricsContainer').innerHTML = 
+                    `<div class="error">Error loading clients: ${error.message}</div>`;
+            }
+        }
+
+        async function onClientChange() {
+            const clientName = document.getElementById('clientSelect').value;
+            const listSelect = document.getElementById('listSelect');
+            
+            if (!clientName) {
+                listSelect.innerHTML = '<option value="">-- Select List --</option>';
+                listSelect.disabled = true;
+                document.getElementById('metricsContainer').innerHTML = 
+                    '<div class="empty-state">Select a client and list to view metrics</div>';
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('clay_tracking')
+                    .select('list_name')
+                    .eq('client_name', clientName)
+                    .order('list_name');
+
+                if (error) throw error;
+
+                lists = [...new Set(data.map(row => row.list_name))];
+                
+                listSelect.innerHTML = '<option value="">-- Select List --</option>';
+                lists.forEach(list => {
+                    const option = document.createElement('option');
+                    option.value = list;
+                    option.textContent = list;
+                    listSelect.appendChild(option);
+                });
+                
+                listSelect.disabled = false;
+            } catch (error) {
+                console.error('Error loading lists:', error);
+                document.getElementById('metricsContainer').innerHTML = 
+                    `<div class="error">Error loading lists: ${error.message}</div>`;
+            }
+        }
+
+        async function onListChange() {
+            const clientName = document.getElementById('clientSelect').value;
+            const listName = document.getElementById('listSelect').value;
+            
+            if (!clientName || !listName) {
+                return;
+            }
+
+            document.getElementById('metricsContainer').innerHTML = 
+                '<div class="loading">Loading metrics...</div>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('clay_tracking')
+                    .select('*')
+                    .eq('client_name', clientName)
+                    .eq('list_name', listName);
+
+                if (error) throw error;
+
+                // Calculate metrics
+                const metrics = {
+                    totalAICosts: 0,
+                    totalIcypeasCredits: 0,
+                    findyMailIcypeas: 0,
+                    wizaIcypeas: 0,
+                    findyMailMyTeam: 0,
+                    wizaMyTeam: 0,
+                    findyMailWebEmails: 0
+                };
+
+                data.forEach(row => {
+                    if (row.table_type === 'main') {
+                        metrics.totalAICosts += parseFloat(row.ai_costs || 0);
+                        metrics.totalIcypeasCredits += parseInt(row.icypeas_credits || 0);
+                    }
+
+                    if (row.table_type === 'icypeas') {
+                        const provider = (row.provider || '').toLowerCase();
+                        if (provider.includes('findy')) {
+                            metrics.findyMailIcypeas += parseInt(row.row_count || 1);
+                        } else if (provider.includes('wiza')) {
+                            metrics.wizaIcypeas += parseInt(row.row_count || 1);
+                        }
+                    }
+
+                    if (row.table_type === 'myteampage') {
+                        const provider = (row.provider || '').toLowerCase();
+                        if (provider.includes('findy')) {
+                            metrics.findyMailMyTeam += parseInt(row.row_count || 1);
+                        } else if (provider.includes('wiza')) {
+                            metrics.wizaMyTeam += parseInt(row.row_count || 1);
+                        }
+                    }
+
+                    if (row.table_type === 'website_emails') {
+                        metrics.findyMailWebEmails += parseInt(row.row_count || 1);
+                    }
+                });
+
+                displayMetrics(metrics);
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                document.getElementById('metricsContainer').innerHTML = 
+                    `<div class="error">Error loading metrics: ${error.message}</div>`;
+            }
+        }
+
+        function displayMetrics(metrics) {
+            const container = document.getElementById('metricsContainer');
+            container.innerHTML = `
+                <div class="metrics">
+                    <div class="metric-card blue">
+                        <div class="metric-title">Total AI Costs</div>
+                        <div class="metric-value">$${metrics.totalAICosts.toFixed(5)}</div>
+                    </div>
+                    <div class="metric-card green">
+                        <div class="metric-title">Total Icypeas Credits</div>
+                        <div class="metric-value">${metrics.totalIcypeasCredits.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card purple">
+                        <div class="metric-title">FindyMail Icypeas</div>
+                        <div class="metric-value">${metrics.findyMailIcypeas.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card orange">
+                        <div class="metric-title">Wiza Icypeas</div>
+                        <div class="metric-value">${metrics.wizaIcypeas.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card pink">
+                        <div class="metric-title">FindyMail MyTeam</div>
+                        <div class="metric-value">${metrics.findyMailMyTeam.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card cyan">
+                        <div class="metric-title">Wiza MyTeam</div>
+                        <div class="metric-value">${metrics.wizaMyTeam.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card teal">
+                        <div class="metric-title">FindyMail WebEmails</div>
+                        <div class="metric-value">${metrics.findyMailWebEmails.toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
+
